@@ -1,0 +1,20 @@
+{
+  "name": "storyline",
+  "version": "1.0.0",
+  "description": "Offline, single-file interactive story editor and player.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "test": "node --test test/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "test:browser": "node test/browser/run.mjs",
+    "example": "node scripts/make-example.mjs",
+    "verify": "npm run check && npm test && npm run build && npm run test:browser"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "esbuild": "0.25.11",
+    "playwright": "1.56.1"
+  }
+}

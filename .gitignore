@@ -1,0 +1,4 @@
+node_modules/
+docs/evidence/
+.DS_Store
+*.log

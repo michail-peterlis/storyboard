@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data:; frame-src about:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Storyline — story editor</title>
+<style>/* APP_CSS */</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark">◆</span> Storyline</div>
+  <button id="project-title" class="title-button" title="Rename the story">Untitled story</button>
+  <nav class="topbar-actions" aria-label="Project actions">
+    <div class="menu"><button id="file-menu-button" class="menu-button" aria-haspopup="true" aria-expanded="false">File ▾</button>
+      <div class="menu-list" id="file-menu" role="menu" hidden>
+        <button role="menuitem" id="new">New project</button>
+        <button role="menuitem" id="open">Open JSON / ZIP…</button>
+        <button role="menuitem" id="open-folder">Open folder…</button>
+        <div id="recent-group" hidden><hr><div class="menu-label">Recent</div><div id="recent-list"></div></div>
+        <hr>
+        <button role="menuitem" id="save-json">Save <kbd>Ctrl+S</kbd></button>
+        <button role="menuitem" id="save-folder">Save to folder as…</button>
+        <button role="menuitem" id="native-save">Save ZIP…</button>
+        <button role="menuitem" id="download">Download ZIP</button>
+        <hr>
+        <button role="menuitem" id="help">Language reference</button>
+        <button role="menuitem" id="theme-toggle">Light theme</button>
+      </div></div>
+    <button id="undo" disabled title="Undo (Ctrl+Z)">↶</button><button id="redo" disabled title="Redo (Ctrl+Shift+Z)">↷</button>
+    <span class="divider"></span>
+    <button id="variables">Variables</button>
+    <button id="macros">Macros</button>
+    <span class="divider"></span>
+    <button id="preview" class="primary" title="Run the selected passage in the side panel">▶ Try passage</button>
+    <button id="play" title="Play the story from its start passage">Play from start</button>
+  </nav>
+</header>
+<input id="file-input" type="file" accept=".json,.zip,application/json,application/zip" hidden>
+<input id="folder-input" type="file" webkitdirectory multiple hidden>
+<input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" hidden>
+<input id="save-input" type="file" accept=".json,application/json" hidden>
+<div id="banner" class="banner" role="status" hidden><span id="banner-text"></span><span class="spacer"></span><button id="banner-restore" class="primary">Restore</button><button id="banner-discard">Discard</button></div>
+<main id="workspace">
+  <section id="map-column" class="column" aria-label="Map and passages">
+    <div class="toolbar map-toolbar">
+      <select id="act-select" aria-label="Act"></select>
+      <div class="menu"><button id="act-menu-button" class="menu-button icon" aria-haspopup="true" title="Act actions">⋯</button>
+        <div class="menu-list" id="act-menu" role="menu" hidden>
+          <button role="menuitem" id="add-act">New act…</button><button role="menuitem" id="rename-act">Rename act…</button><button role="menuitem" id="merge-act">Merge act into…</button>
+        </div></div>
+      <span class="spacer"></span>
+      <button id="add-passage" title="Add a passage (Ctrl+N)">+ Passage</button>
+      <button id="auto-layout" title="Auto-layout: arrange the cards of this act">Arrange</button>
+      <button id="fit" title="Fit the act in view">Fit</button>
+      <button id="zoom-out" class="icon" aria-label="Zoom out">−</button><output id="zoom-label">100%</output><button id="zoom-in" class="icon" aria-label="Zoom in">+</button>
+    </div>
+    <div id="map-navigation">
+      <div id="map" tabindex="0" aria-label="Passage map. Drag blank space to pan, wheel to zoom, drag cards to move, drag a card's port onto another card to link.">
+        <div id="world"><svg id="edges" aria-hidden="true"></svg><div id="cards"></div><svg id="wire" aria-hidden="true"><path id="wire-path"></path></svg></div>
+        <div id="map-hint" class="map-hint" hidden></div>
+      </div>
+      <div id="map-splitter" class="splitter splitter-horizontal" role="separator" tabindex="0" aria-label="Resize map and passage list" aria-orientation="horizontal" title="Drag to resize. Double-click to reset."></div>
+      <div id="passage-list" class="passage-list">
+        <div class="passage-search-row">
+          <input id="passage-search" type="search" placeholder="Search passages…" autocomplete="off" spellcheck="false" aria-label="Search passages by title, ID or text">
+          <output id="passage-count" aria-live="polite"></output>
+        </div>
+        <div id="passages" role="listbox" aria-label="Passages"></div>
+        <p id="passage-empty" class="passage-empty" hidden>No passages match.</p>
+      </div>
+    </div>
+  </section>
+  <div id="column-splitter" class="splitter splitter-vertical" role="separator" tabindex="0" aria-label="Resize map and editor" aria-orientation="vertical" title="Drag to resize. Double-click to reset."></div>
+  <section id="editor-column" class="column" aria-label="Passage editor">
+    <div class="passage-header">
+      <input id="passage-title" class="passage-title" maxlength="200" aria-label="Passage title" spellcheck="false">
+      <div class="passage-meta">
+        <span id="passage-id" class="mono" title="Passage ID (follows the title)"></span>
+        <span id="passage-badges"></span>
+        <span class="spacer"></span>
+        <select id="passage-act" aria-label="Act of this passage" title="Move this passage to another act"></select>
+        <div class="menu"><button id="passage-menu-button" class="menu-button icon" aria-haspopup="true" title="Passage actions">⋯</button>
+          <div class="menu-list" id="passage-menu" role="menu" hidden>
+            <button role="menuitem" id="set-start">Set as story start</button>
+            <button role="menuitem" id="set-act-start">Set as act entry</button>
+            <button role="menuitem" id="locate-passage">Center on map</button>
+            <hr>
+            <button role="menuitem" id="duplicate">Duplicate</button>
+            <button role="menuitem" id="delete" class="danger">Delete…</button>
+          </div></div>
+      </div>
+    </div>
+    <div id="image-strip" class="image-strip">
+      <button type="button" id="image-preview" class="image-thumb" aria-label="Open image" hidden><img id="image-thumb" alt=""></button>
+      <div class="image-fields">
+        <div class="row">
+          <button type="button" id="add-image">+ Image</button>
+          <button type="button" id="replace-image" hidden>Replace</button>
+          <button type="button" id="remove-image" hidden>Remove</button>
+          <span id="image-name" class="muted"></span>
+        </div>
+        <input id="image-caption" placeholder="Caption (shown under the image)" maxlength="500" hidden>
+      </div>
+    </div>
+    <div class="toolbar editor-toolbar" role="group" aria-label="Insert syntax">
+      <button data-snippet="scene" title="## scene — start a scene">Scene</button>
+      <button data-snippet="environment" title="## environment — context shown beside the story">Env</button>
+      <button data-snippet="description" title="> narrative event">Event</button>
+      <button data-snippet="dialogue" title="- Name: line (use + for the player)">Dialogue</button>
+      <button data-snippet="choice" title="* choice (condition; effect) [target]">Choice</button>
+      <button data-snippet="condition" title="? condition">Condition</button>
+      <button id="insert-link" title="[passage] link">Link…</button>
+      <button data-snippet="input" title="[?variable] input">Input</button>
+      <button data-snippet="set" title="$variable = value">Set</button>
+      <button data-snippet="rule" title="--- reveal pause">Pause</button>
+      <button id="help-inline" class="icon" title="Language reference">?</button>
+    </div>
+    <div id="source" class="source-editor" aria-label="Passage source"></div>
+    <details id="diagnostics-panel" class="panel-details" open><summary><span id="diagnostic-summary">Diagnostics</span></summary><ul id="diagnostics" aria-live="polite"></ul></details>
+    <details class="panel-details"><summary><span id="connections-summary">Connections</span></summary><ul id="connections"></ul></details>
+  </section>
+  <div id="preview-splitter" class="splitter splitter-vertical" role="separator" tabindex="0" aria-label="Resize editor and preview" aria-orientation="vertical" hidden></div>
+  <aside id="preview-column" class="column" aria-label="Preview" hidden>
+    <div class="toolbar preview-toolbar">
+      <span id="preview-mode" class="preview-mode">Preview</span>
+      <span class="spacer"></span>
+      <label class="toggle" title="Restart the trial whenever the source changes"><input type="checkbox" id="preview-live" checked> Live</label>
+      <button id="preview-undo" title="Undo the last choice, link or input in the simulation" disabled>↶</button>
+      <button id="restart" title="Restart">↻</button>
+      <button id="toggle-debug" aria-expanded="false" title="Runtime state">State</button>
+      <button id="expand-preview" class="icon" title="Simulate in the whole window" aria-pressed="false">⤢</button>
+      <button id="close-preview" class="icon" aria-label="Close preview">×</button>
+    </div>
+    <div id="frame-container"></div>
+    <p id="play-diagnostic" role="alert"></p>
+    <div id="debug-sidebar" class="debug" hidden>
+      <div class="row">
+        <button id="save-game">Save state ↓</button><button id="load-game">Load state…</button><button id="export-observations">Export observations ↓</button>
+        <span class="spacer"></span><button id="enable-js" title="Trusted authors only: custom JavaScript can freeze the tab.">Enable JavaScript</button>
+      </div>
+      <p id="snapshot-status" class="muted"></p>
+      <div class="row state-head"><h3>State</h3><span class="spacer"></span><label class="toggle"><input type="checkbox" id="state-raw"> JSON</label></div>
+      <div id="state-view" class="state-view"></div>
+      <pre id="debug" tabindex="0" hidden></pre>
+      <h3 id="observation-summary" hidden>Observations</h3><pre id="observations" tabindex="0" hidden></pre>
+    </div>
+  </aside>
+</main>
+<footer class="statusbar"><span id="file-status" role="status">New project — not saved</span><span class="spacer"></span><span id="counts"></span><span id="dirty"></span></footer>
+
+<dialog id="variables-dialog" class="window"><form method="dialog" id="variables-form">
+  <header class="window-header"><h2>Variables</h2><nav class="tabs" role="tablist"><button type="button" role="tab" data-tab="global" aria-selected="true">Global state</button><button type="button" role="tab" data-tab="traits">Trait defaults</button><button type="button" role="tab" data-tab="local">Passage locals</button></nav><button type="button" class="icon close" id="variables-close" aria-label="Close">×</button></header>
+  <p id="variables-help" class="muted"></p>
+  <div id="variables-table-wrap"><table class="variables-table"><thead><tr><th>Path</th><th>Type</th><th>Default value</th><th></th></tr></thead><tbody id="variables-rows"></tbody></table></div>
+  <div class="row"><button type="button" id="variable-add">+ Variable</button><label class="toggle"><input type="checkbox" id="variables-raw-toggle"> Edit as JSON</label></div>
+  <textarea id="variables-raw" spellcheck="false" rows="10" hidden></textarea>
+  <p id="variables-error" role="alert" class="error"></p>
+  <footer class="row end"><button type="button" id="variables-cancel">Cancel</button><button type="submit" class="primary">Apply</button></footer>
+</form></dialog>
+
+<dialog id="macros-dialog" class="window wide"><form method="dialog" id="macros-form">
+  <header class="window-header"><h2>Macros</h2><span class="muted">Custom JavaScript, called with <code>@id</code>. Runs only after approval in the preview.</span><button type="button" class="icon close" id="macros-close" aria-label="Close">×</button></header>
+  <div class="macros-layout">
+    <div class="macros-list"><div id="macro-list" role="listbox" aria-label="Macros"></div><div class="row"><button type="button" id="macro-add">+ Macro</button><button type="button" id="macro-delete" class="danger">Delete</button></div></div>
+    <div id="macro-fields" class="macro-fields">
+      <label>ID <input id="macro-id" spellcheck="false" pattern="[A-Za-z_][A-Za-z0-9_\-]{0,79}"></label>
+      <label>Function body <small class="muted">receives <code>ctx</code>: <code>ctx.get(path)</code>, <code>ctx.set(path, value)</code>, <code>ctx.has(path)</code>, <code>ctx.text(string)</code>, <code>ctx.link(label, passageId)</code></small></label>
+      <div id="macro-code" class="source-editor code-mode" aria-label="Macro code"></div>
+      <label>Passages this macro may link to <select id="macro-targets" multiple size="4"></select></label>
+    </div>
+  </div>
+  <p id="macros-error" role="alert" class="error"></p>
+  <footer class="row end"><button type="button" id="macros-cancel">Cancel</button><button type="submit" class="primary">Apply</button></footer>
+</form></dialog>
+
+<dialog id="link-dialog" class="window small"><form method="dialog" id="link-form">
+  <header class="window-header"><h2 id="link-heading">Insert link</h2><button type="button" class="icon close" id="link-close" aria-label="Close">×</button></header>
+  <label>Destination <select id="link-target"></select></label>
+  <label>Label <small class="muted">(leave empty for a plain <code>[passage]</code> link)</small><input id="link-label" placeholder="Continue"></label>
+  <p id="link-error" role="alert" class="error"></p>
+  <footer class="row end"><button type="button" id="link-cancel">Cancel</button><button type="submit" class="primary">Insert</button></footer>
+</form></dialog>
+
+<dialog id="act-dialog" class="window small"><form method="dialog" id="act-form"><header class="window-header"><h2 id="act-heading">New act</h2></header><label>Name <input id="act-name" required maxlength="200"></label><p id="act-error" role="alert" class="error"></p><footer class="row end"><button id="act-cancel" type="button">Cancel</button><button type="submit" class="primary">Save</button></footer></form></dialog>
+<dialog id="merge-act-dialog" class="window small"><form method="dialog" id="merge-act-form"><header class="window-header"><h2>Merge act</h2></header><p id="merge-act-help" class="muted"></p><label>Move every passage into <select id="merge-act-target"></select></label><footer class="row end"><button id="merge-act-cancel" type="button">Cancel</button><button type="submit" class="primary">Merge</button></footer></form></dialog>
+<dialog id="delete-dialog" class="window small"><form method="dialog" id="delete-form"><header class="window-header"><h2>Delete passage?</h2></header><p id="delete-warning"></p><label id="replacement-row">New story start <select id="replacement-start"></select></label><footer class="row end"><button id="delete-cancel" type="button">Cancel</button><button type="submit" class="danger">Delete</button></footer></form></dialog>
+<dialog id="confirm-dialog" class="window small"><form method="dialog"><header class="window-header"><h2 id="confirm-heading">Confirm</h2></header><p id="confirm-text"></p><footer class="row end"><button value="cancel" type="button" id="confirm-cancel">Cancel</button><button value="ok" type="submit" class="primary" id="confirm-ok">OK</button></footer></form></dialog>
+<dialog id="prompt-dialog" class="window small"><form method="dialog" id="prompt-form"><header class="window-header"><h2 id="prompt-heading">Rename</h2></header><label id="prompt-label">Name <input id="prompt-input" maxlength="200"></label><footer class="row end"><button type="button" id="prompt-cancel">Cancel</button><button type="submit" class="primary">OK</button></footer></form></dialog>
+<dialog id="image-dialog" class="window"><header class="window-header"><h2>Image</h2><button type="button" class="icon close" id="image-close" aria-label="Close">×</button></header><img id="image-full" alt=""><p id="image-full-caption" class="muted"></p></dialog>
+<dialog id="help-dialog" class="window wide"><header class="window-header"><h2>Storyline language</h2><button type="button" class="icon close" id="help-close" aria-label="Close">×</button></header><div class="help-body" id="help-body"></div></dialog>
+<script>/* APP_JS */</script>
+</body></html>
