@@ -1,5 +1,10 @@
 // Layered left-to-right layout for passage maps.
 export const CARD_WIDTH = 240;
+// Map grid: card corners snap to multiples of GRID world pixels; the map draws a dot at every grid point.
+export const GRID = 24;
+export const snapToGrid = (value, step = GRID) => Math.round(value / step) * step;
+export const snapPosition = (position, step = GRID) => ({ x: snapToGrid(position.x, step), y: snapToGrid(position.y, step) });
+const ceilToGrid = value => Math.ceil(value / GRID) * GRID;
 export function autoLayout(passages, edges, { startId = null, cardHeight = () => 120, gapX = 90, gapY = 36, origin = { x: 60, y: 60 } } = {}) {
   const ids = passages.map(p => p.id), index = new Map(ids.map((id, i) => [id, i]));
   const out = new Map(ids.map(id => [id, []])), inc = new Map(ids.map(id => [id, []]));
@@ -36,13 +41,13 @@ export function autoLayout(passages, edges, { startId = null, cardHeight = () =>
       columns[c].sort((a, b) => bary(a, out, position) - bary(b, out, position) || index.get(a) - index.get(b)); reposition();
     }
   }
-  // Coordinates: columns centred on a shared axis.
+  // Coordinates: columns centred on a shared axis, every card on the grid (gaps are rounded up, never down).
   const heights = columns.map(column => column.reduce((sum, id) => sum + cardHeight(id), 0) + Math.max(0, column.length - 1) * gapY);
-  const tallest = Math.max(...heights, 0);
+  const tallest = Math.max(...heights, 0), stride = ceilToGrid(CARD_WIDTH + gapX);
   const positions = new Map();
   columns.forEach((column, c) => {
-    let y = origin.y + (tallest - heights[c]) / 2;
-    for (const id of column) { positions.set(id, { x: Math.round(origin.x + c * (CARD_WIDTH + gapX)), y: Math.round(y) }); y += cardHeight(id) + gapY; }
+    let y = ceilToGrid(origin.y + (tallest - heights[c]) / 2);
+    for (const id of column) { positions.set(id, { x: ceilToGrid(origin.x) + c * stride, y }); y = ceilToGrid(y + cardHeight(id) + gapY); }
   });
   return positions;
 }

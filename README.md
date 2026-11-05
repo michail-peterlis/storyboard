@@ -49,9 +49,11 @@ Full reference: [docs/language.md](docs/language.md).
 
 ## Workspace
 
-- **Map** (left): drag blank space to pan, wheel to zoom, drag cards to move. Drag
+- **Map** (left): drag blank space to pan, wheel to zoom, drag cards to move. Cards
+  sit on the dot grid, 24 px apart at 100% and coarser when zoomed out; dragging snaps to
+  the visible dots, and stories with off-grid positions are shown snapped. Drag
   the port on a card's right edge onto another card to insert a link. **Arrange**
-  auto-layouts the current act (undoable). Selecting a passage from the list, the
+  auto-layouts the current act on the grid (undoable). Selecting a passage from the list, the
   search, a connection or the preview centers it on the map.
 - **Editor** (middle): title heading (editable; the ID follows), one image per
   passage with caption, the source editor, diagnostics and connections.

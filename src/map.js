@@ -1,15 +1,20 @@
 // Passage map: cards, edges, pan/zoom, card dragging, drag-to-link wires.
-import { CARD_WIDTH } from './layout.js';
+import { CARD_WIDTH, GRID, snapPosition } from './layout.js';
 const SVG = 'http://www.w3.org/2000/svg';
 const svg = (tag, attributes = {}) => { const el = document.createElementNS(SVG, tag); for (const [key, value] of Object.entries(attributes)) el.setAttribute(key, String(value)); return el; };
 
 export function createMap(root, hooks) {
   const world = root.querySelector('#world'), edgesSvg = root.querySelector('#edges'), cardsRoot = root.querySelector('#cards'), wire = root.querySelector('#wire-path'), hint = root.querySelector('#map-hint');
   const cards = new Map(); // id → { node, title, excerpt, badges, image, imageUrl, height }
-  let view = { x: 0, y: 0, zoom: 1 }, drag = null, edgeSignature = '', selectedEdge = null;
+  let view = { x: 0, y: 0, zoom: 1 }, drag = null, edgeSignature = '', selectedEdge = null, gridStep = GRID;
   const applyView = (animated = false) => {
-    world.classList.toggle('animated', animated);
+    world.classList.toggle('animated', animated); root.classList.toggle('animated', animated);
     world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`;
+    // The dot grid follows the world so a dot sits on every snap point. Zoomed out it thins to every 2nd, 4th… grid
+    // line, and cards snap to the dots that are visible, so the step always matches what is on screen.
+    gridStep = GRID; while (gridStep * view.zoom < 16) gridStep *= 2;
+    const size = gridStep * view.zoom;
+    root.style.backgroundSize = `${size}px ${size}px`; root.style.backgroundPosition = `${view.x - size / 2}px ${view.y - size / 2}px`;
     hooks.onZoomLabel?.(view.zoom);
   };
   const button = (text, onClick, className = '') => { const el = document.createElement('button'); el.type = 'button'; el.textContent = text; el.className = className; el.addEventListener('click', onClick); return el; };
@@ -104,10 +109,13 @@ export function createMap(root, hooks) {
     }
     edgesSvg.replaceChildren(...nodes);
   }
+  // Every card is shown on the grid, whatever its stored position (older stories and hand-edited files are off-grid).
+  const onGrid = passages => passages.map(p => ({ ...p, position: snapPosition(p.position) }));
   function render(data, { animated = false } = {}) {
     view = { ...data.viewport }; applyView(animated);
-    renderCards(data.passages, data);
-    renderEdges(data.passages, data.edges, data);
+    const passages = onGrid(data.passages);
+    renderCards(passages, data);
+    renderEdges(passages, data.edges, data);
   }
   // ---- Pointer interaction -----------------------------------------------------------
   const client = event => { const rect = root.getBoundingClientRect(); return { x: (event.clientX - rect.left - view.x) / view.zoom, y: (event.clientY - rect.top - view.y) / view.zoom }; };
@@ -137,7 +145,7 @@ export function createMap(root, hooks) {
     const dx = event.clientX - drag.start.x, dy = event.clientY - drag.start.y;
     if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
     drag.moved = true;
-    if (drag.kind === 'card') { drag.next = { x: Math.round(drag.origin.x + dx / view.zoom), y: Math.round(drag.origin.y + dy / view.zoom) }; hooks.onPreviewMove?.(drag.id, drag.next); }
+    if (drag.kind === 'card') { drag.next = snapPosition({ x: drag.origin.x + dx / view.zoom, y: drag.origin.y + dy / view.zoom }, gridStep); hooks.onPreviewMove?.(drag.id, drag.next); }
     else { view = { ...drag.origin, x: drag.origin.x + dx, y: drag.origin.y + dy }; applyView(false); }
   });
   function finish(event, cancelled = false) {
@@ -168,16 +176,18 @@ export function createMap(root, hooks) {
   return {
     render, cardHeight,
     centerOn(position, id, { animated = true } = {}) {
-      const height = cardHeight(id);
+      const height = cardHeight(id); position = snapPosition(position);
       view = { ...view, x: root.clientWidth / 2 - (position.x + CARD_WIDTH / 2) * view.zoom, y: root.clientHeight / 2 - (position.y + height / 2) * view.zoom };
       applyView(animated); hooks.onViewport?.(view); return view;
     },
     isVisible(position, id) {
+      position = snapPosition(position);
       const height = cardHeight(id), left = position.x * view.zoom + view.x, top = position.y * view.zoom + view.y;
       return left >= 0 && top >= 0 && left + CARD_WIDTH * view.zoom <= root.clientWidth && top + height * view.zoom <= root.clientHeight;
     },
     fit(passages, { minZoom = 0.2 } = {}) {
       if (!passages.length) return view;
+      passages = onGrid(passages);
       const xs = passages.map(p => p.position.x), ys = passages.map(p => p.position.y);
       const minX = Math.min(...xs), minY = Math.min(...ys), width = Math.max(...xs) - minX + CARD_WIDTH, height = Math.max(...passages.map(p => p.position.y + cardHeight(p.id))) - minY;
       const zoom = Math.min(1.25, Math.max(minZoom, Math.min((root.clientWidth - 80) / width, (root.clientHeight - 80) / height)));
@@ -186,7 +196,7 @@ export function createMap(root, hooks) {
     },
     zoom(factor) { zoomAround(factor); },
     get viewport() { return { ...view }; },
-    worldCenter() { return { x: (root.clientWidth / 2 - view.x) / view.zoom - CARD_WIDTH / 2, y: (root.clientHeight / 2 - view.y) / view.zoom - 60 }; },
+    worldCenter() { return snapPosition({ x: (root.clientWidth / 2 - view.x) / view.zoom - CARD_WIDTH / 2, y: (root.clientHeight / 2 - view.y) / view.zoom - 60 }, gridStep); },
     clearEdgeSelection() { selectedEdge = null; edgeSignature = ''; }
   };
 }

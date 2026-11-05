@@ -80,6 +80,7 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe { 
 #map-navigation { flex: 1; display: grid; grid-template-rows: minmax(120px, calc(var(--map-fraction) * 100%)) 6px minmax(140px, 1fr); min-height: 0; }
 #map { position: relative; overflow: hidden; background: var(--bg); background-image: radial-gradient(circle, var(--line) 1px, transparent 1px); background-size: 24px 24px; cursor: grab; outline: none; min-height: 0; }
 #map.panning { cursor: grabbing; } #map.linking { cursor: crosshair; }
+#map.animated { transition: background-position .28s cubic-bezier(.2,.7,.2,1), background-size .28s cubic-bezier(.2,.7,.2,1); }
 #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 #world.animated { transition: transform .28s cubic-bezier(.2,.7,.2,1); }
 #edges, #wire { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }

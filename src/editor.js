@@ -2,7 +2,7 @@ import { History, newProject, cloneProject, sameProject, passageIdForTitle } fro
 import { compileProject, knownVariables } from './compiler.js';
 import { renamePassage, appendLink, insertSnippet } from './commands.js';
 import { getActs, ensureActs, actForPassage, passagesInAct, actViewport, addAct, attachPassage, movePassage, mergeAct, removePassage } from './acts.js';
-import { autoLayout } from './layout.js';
+import { autoLayout, snapPosition } from './layout.js';
 import { createCodeEditor } from './code-editor.js';
 import { createMap } from './map.js';
 import { initializePassageList } from './passage-list.js';
@@ -335,7 +335,7 @@ byId('set-act-start').addEventListener('click', () => change(p => { ensureActs(p
 byId('locate-passage').addEventListener('click', () => map.centerOn(passage().position, selectedId));
 byId('duplicate').addEventListener('click', () => {
   const copy = cloneProject(project()).passages.find(p => p.id === selectedId);
-  copy.title = `${copy.title.slice(0, 193)} (copy)`; copy.id = passageIdForTitle(copy.title, project().passages); copy.position = { x: copy.position.x + 40, y: copy.position.y + 160 };
+  copy.title = `${copy.title.slice(0, 193)} (copy)`; copy.id = passageIdForTitle(copy.title, project().passages); copy.position = snapPosition({ x: copy.position.x + 48, y: copy.position.y + 168 });
   const lines = copy.source.split('\n'); let first = 0;
   while (first < lines.length && (!lines[first].trim() || lines[first].trimStart().startsWith('//'))) first++;
   if (/^\s*#\s+/.test(lines[first] ?? '')) { lines[first] = lines[first].replace(/^(\s*#\s+).*$/, `$1${copy.title}`); copy.source = lines.join('\n'); }
@@ -416,8 +416,8 @@ byId('act-select').addEventListener('change', () => { const act = getActs(projec
 byId('add-passage').addEventListener('click', () => {
   const id = passageIdForTitle('New passage', project().passages), position = map.worldCenter(), actId = currentAct().id;
   const taken = visiblePassages().some(p => Math.abs(p.position.x - position.x) < 40 && Math.abs(p.position.y - position.y) < 40);
-  if (taken) { position.x += 60; position.y += 60; }
-  if (change(p => { p.passages.push({ id, title: 'New passage', position: { x: Math.round(position.x), y: Math.round(position.y) }, source: '# New passage\n\n' }); attachPassage(p, actId, id); }, { nextSelection: id })) { byId('passage-title').focus(); byId('passage-title').select(); }
+  if (taken) { position.x += 72; position.y += 72; }
+  if (change(p => { p.passages.push({ id, title: 'New passage', position: snapPosition(position), source: '# New passage\n\n' }); attachPassage(p, actId, id); }, { nextSelection: id })) { byId('passage-title').focus(); byId('passage-title').select(); }
 });
 byId('auto-layout').addEventListener('click', () => {
   const passages = visiblePassages(), positions = autoLayout(passages, [...compiled.values()].flatMap(r => r.edges), { startId: currentAct().startPassageId, cardHeight: id => map.cardHeight(id) });
