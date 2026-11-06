@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "husky",
     "check": "node scripts/check.mjs",
     "test": "node --test test/*.test.mjs",
     "build": "node scripts/build.mjs",
@@ -12,9 +13,9 @@
     "example": "node scripts/make-example.mjs",
     "verify": "npm run check && npm test && npm run build && npm run test:browser"
   },
-  "dependencies": {},
   "devDependencies": {
     "esbuild": "0.25.11",
+    "husky": "^9.1.7",
     "playwright": "1.56.1"
   }
 }

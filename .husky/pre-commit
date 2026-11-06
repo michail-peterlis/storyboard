@@ -1,0 +1,6 @@
+# Pre-commit: fast validation, then bump the patch version so every commit carries its own version.
+# Skip once with `git commit -n` (or HUSKY=0 for a whole shell).
+npm test
+
+npm version patch --no-git-tag-version
+git add package.json package-lock.json
