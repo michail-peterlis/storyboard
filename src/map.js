@@ -47,7 +47,7 @@ export function createMap(root, hooks) {
       card.node.style.transform = `translate(${position.x}px, ${position.y}px)`;
       setText(card.titleText, passage.title || '(untitled)');
       card.star.hidden = passage.id !== startId;
-      setText(card.excerpt, excerptOf(result));
+      setText(card.excerpt, excerptOf(passage.source));
       const badges = [];
       if (passage.id === playingId) badges.push(['playing', '▶ playing']);
       if (passage.id === actEntryId && passage.id !== startId) badges.push(['entry', 'act entry']);
@@ -64,11 +64,11 @@ export function createMap(root, hooks) {
       if (cardsRoot.children[index] !== card.node) cardsRoot.insertBefore(card.node, cardsRoot.children[index] ?? null);
     });
   }
-  function excerptOf(result) {
-    const parts = [];
-    const walk = nodes => { for (const node of nodes) { if (parts.join(' ').length > 160) return; if (node.type === 'if') walk(node.children); else if (node.inline) parts.push(node.inline.filter(n => n.type === 'text').map(n => n.text).join('')); else if (node.type === 'choiceGroup') parts.push(node.options.map(o => `• ${o.label}`).join(' ')); } };
-    walk(result.ast);
-    return parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+  // The card shows one line of source: the first non-blank line after the `# Title` heading (or the first line at all).
+  function excerptOf(source) {
+    const lines = source.split('\n'), title = lines.findIndex(line => /^#(?!#)/.test(line.trimStart()));
+    for (let i = title + 1; i < lines.length; i++) { const text = lines[i].trim(); if (text) return text.slice(0, 160); }
+    return '';
   }
   function cardHeight(id) { return cards.get(id)?.node.offsetHeight || 120; }
   function anchor(passage, position, side) {
