@@ -150,6 +150,16 @@ await page.click('#macros-cancel');
 await page.click('#file-menu-button'); await page.click('#theme-toggle'); await page.waitForTimeout(300);
 check('light theme applied', await page.evaluate(() => document.documentElement.dataset.theme) === 'light');
 await shot('09-light-theme');
+
+// Editor settings: font size applies to the source editor and is remembered.
+await page.click('#file-menu-button'); await page.click('#settings'); await page.waitForTimeout(200);
+await page.fill('#settings-font-size', '18'); await page.selectOption('#settings-font', 'sans'); await page.waitForTimeout(200);
+const editorFont = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('#source')); return [s.fontSize, s.fontFamily]; });
+check('editor font settings apply', editorFont[0] === '18px' && /Inter|sans-serif/.test(editorFont[1]), editorFont.join(' / '));
+check('editor font settings persisted', await page.evaluate(() => { try { const s = JSON.parse(localStorage.getItem('storyline.workspace.v2')); return s.editorFontSize === 18 && s.editorFont === 'sans'; } catch { return false; } }));
+await shot('09b-editor-settings');
+await page.click('#settings-reset'); await page.click('#settings-close'); await page.waitForTimeout(200);
+check('editor font settings reset', await page.evaluate(() => getComputedStyle(document.querySelector('#source')).fontSize) === '13.5px');
 await page.click('#file-menu-button'); await page.click('#theme-toggle'); await page.waitForTimeout(200);
 
 // Download ZIP and reopen.

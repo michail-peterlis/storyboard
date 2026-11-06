@@ -107,8 +107,8 @@ const files = createFileActions(document, {
 // ---- Autosave draft (IndexedDB) --------------------------------------------------
 const drafts = createDraftStore();
 let draftTimer = null, draftBusy = false, draftDirty = false, touched = false; // touched: the user edited since the project was loaded
-function scheduleDraft() {
-  if (!drafts.available || !touched || !isDirty()) return;
+function scheduleDraft(dirty = isDirty()) {
+  if (!drafts.available || !touched || !dirty) return;
   clearTimeout(draftTimer);
   draftTimer = setTimeout(async () => {
     if (draftBusy) { draftDirty = true; return; }
@@ -150,7 +150,7 @@ function withViewports(p) {
   return copy;
 }
 function isDirty() { return !savedSnapshot || !sameProject(savedSnapshot, withViewports(project())); }
-function markChanged() { byId('dirty').textContent = isDirty() ? '● Unsaved changes' : '✓ Saved'; byId('dirty').classList.toggle('dirty', isDirty()); scheduleDraft(); }
+function markChanged() { const dirty = isDirty(); byId('dirty').textContent = dirty ? '● Unsaved changes' : '✓ Saved'; byId('dirty').classList.toggle('dirty', dirty); scheduleDraft(dirty); }
 function loadProject(next, { saved = false, message = 'Project opened.' } = {}) {
   preview.close(); passageList.clear(); viewports.clear(); compileCache.clear(); renameWarning = null;
   history.reset(next); touched = false; clearTimeout(draftTimer);
@@ -196,12 +196,13 @@ function refresh({ editor = true } = {}) {
   compileAll();
   syncTitleFromSource();
   const p = project(), current = passage(), result = compiled.get(current.id), act = currentAct();
+  if (editor) sourceEditor.value = current.source;
+  sourceEditor.setDiagnostics(result.diagnostics); // measures the editor while layout is still clean, before the writes below
   byId('project-title').textContent = p.title; document.title = `${p.title} — Storyline`;
   const errors = [...compiled.values()].reduce((sum, r) => sum + r.errors, 0), warnings = [...compiled.values()].reduce((sum, r) => sum + r.diagnostics.length - r.errors, 0);
   byId('counts').textContent = `${getActs(p).length} act${getActs(p).length === 1 ? '' : 's'} · ${p.passages.length} passage${p.passages.length === 1 ? '' : 's'}${errors ? ` · ${errors} error${errors === 1 ? '' : 's'}` : ''}${warnings ? ` · ${warnings} warning${warnings === 1 ? '' : 's'}` : ''}`;
   renderActs();
   if (document.activeElement !== byId('passage-title')) byId('passage-title').value = current.title;
-  if (editor) sourceEditor.value = current.source;
   byId('passage-id').textContent = current.id;
   const badges = [];
   if (current.id === p.startPassageId) badges.push(['start', '★ story start']);
@@ -210,7 +211,6 @@ function refresh({ editor = true } = {}) {
   byId('set-start').disabled = current.id === p.startPassageId; byId('set-act-start').disabled = current.id === act.startPassageId;
   byId('delete').disabled = act.passageIds.length === 1; byId('delete').title = act.passageIds.length === 1 ? 'An act needs one passage; merge the act instead.' : '';
   renderImage(); renderDiagnostics(result); renderConnections();
-  sourceEditor.setDiagnostics(result.diagnostics);
   passageList.render(visiblePassages(), selectedId, p.startPassageId, compiled);
   renderMap();
   byId('undo').disabled = !history.undoStack.length; byId('redo').disabled = !history.redoStack.length;
@@ -459,6 +459,16 @@ byId('preview').addEventListener('click', () => preview.tryPassage(selectedId));
 byId('play').addEventListener('click', () => preview.playFromStart());
 byId('theme-toggle').addEventListener('click', () => { const theme = workspaceLayout.theme === 'dark' ? 'light' : 'dark'; workspaceLayout.setTheme(theme); preview.setTheme(theme); byId('theme-toggle').textContent = theme === 'dark' ? 'Light theme' : 'Dark theme'; });
 byId('theme-toggle').textContent = workspaceLayout.theme === 'dark' ? 'Light theme' : 'Dark theme';
+// Editor settings: font size and family for the source and macro editors (authoring preferences, kept in the browser).
+const settingsDialog = byId('settings-dialog'), fontSizeInput = byId('settings-font-size'), fontSelect = byId('settings-font');
+function showSettings() { const { editorFontSize, editorFont } = workspaceLayout.settings; fontSizeInput.value = String(editorFontSize); fontSelect.value = editorFont; }
+byId('settings').addEventListener('click', () => { showSettings(); settingsDialog.showModal(); fontSizeInput.focus(); });
+byId('settings-close').addEventListener('click', () => settingsDialog.close());
+byId('settings-reset').addEventListener('click', () => { workspaceLayout.resetSettings(); showSettings(); });
+fontSizeInput.addEventListener('input', () => { const size = Number(fontSizeInput.value); if (Number.isFinite(size) && size >= Number(fontSizeInput.min) && size <= Number(fontSizeInput.max)) workspaceLayout.setSettings({ editorFontSize: size }); });
+byId('settings-font-smaller').addEventListener('click', () => { workspaceLayout.setSettings({ editorFontSize: workspaceLayout.settings.editorFontSize - 1 }); showSettings(); });
+byId('settings-font-larger').addEventListener('click', () => { workspaceLayout.setSettings({ editorFontSize: workspaceLayout.settings.editorFontSize + 1 }); showSettings(); });
+fontSelect.addEventListener('change', () => workspaceLayout.setSettings({ editorFont: fontSelect.value }));
 document.addEventListener('keydown', event => {
   const mod = event.ctrlKey || event.metaKey;
   if (!mod || event.defaultPrevented) return;

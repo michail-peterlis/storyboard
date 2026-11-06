@@ -1,6 +1,9 @@
 // Column and pane sizes are authoring preferences, separate from the project.
 const STORAGE_KEY = 'storyline.workspace.v2';
-const DEFAULTS = Object.freeze({ map: 480, preview: 460, mapFraction: 0.6, theme: 'dark' });
+const DEFAULTS = Object.freeze({ map: 480, preview: 460, mapFraction: 0.6, theme: 'dark', editorFontSize: 13.5, editorFont: 'mono' });
+export const EDITOR_FONTS = Object.freeze({ mono: 'var(--mono)', sans: 'var(--sans)', serif: 'Georgia, "Times New Roman", Times, serif' });
+export const FONT_SIZE_RANGE = Object.freeze({ min: 9, max: 28 });
+const SETTING_KEYS = ['editorFontSize', 'editorFont'];
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export function initializeWorkspaceLayout(document, window) {
@@ -22,6 +25,9 @@ export function initializeWorkspaceLayout(document, window) {
       (key === 'mapFraction' ? navigation : workspace).style.setProperty(split.property, `${value}${split.unit}`);
     }
     document.documentElement.dataset.theme = preferences.theme;
+    const size = clamp(Number(preferences.editorFontSize) || DEFAULTS.editorFontSize, FONT_SIZE_RANGE.min, FONT_SIZE_RANGE.max);
+    document.documentElement.style.setProperty('--editor-font-size', `${size}px`);
+    document.documentElement.style.setProperty('--editor-font-family', EDITOR_FONTS[preferences.editorFont] ?? EDITOR_FONTS.mono);
   }
   for (const [key, split] of Object.entries(splits)) {
     split.handle.addEventListener('pointerdown', event => {
@@ -52,6 +58,13 @@ export function initializeWorkspaceLayout(document, window) {
   return {
     refresh,
     get theme() { return preferences.theme; },
-    setTheme(theme) { preferences.theme = theme; refresh(); persist(); }
+    setTheme(theme) { preferences.theme = theme; refresh(); persist(); },
+    get settings() { return Object.fromEntries(SETTING_KEYS.map(key => [key, preferences[key]])); },
+    setSettings(values) {
+      if (typeof values.editorFontSize === 'number' && Number.isFinite(values.editorFontSize)) preferences.editorFontSize = clamp(Math.round(values.editorFontSize * 2) / 2, FONT_SIZE_RANGE.min, FONT_SIZE_RANGE.max);
+      if (values.editorFont in EDITOR_FONTS) preferences.editorFont = values.editorFont;
+      refresh(); persist();
+    },
+    resetSettings() { for (const key of SETTING_KEYS) preferences[key] = DEFAULTS[key]; refresh(); persist(); }
   };
 }

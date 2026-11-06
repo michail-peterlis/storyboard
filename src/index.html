@@ -25,6 +25,7 @@
         <button role="menuitem" id="download">Download ZIP</button>
         <hr>
         <button role="menuitem" id="help">Language reference</button>
+        <button role="menuitem" id="settings">Editor settings…</button>
         <button role="menuitem" id="theme-toggle">Light theme</button>
       </div></div>
     <button id="undo" disabled title="Undo (Ctrl+Z)">↶</button><button id="redo" disabled title="Redo (Ctrl+Shift+Z)">↷</button>
@@ -188,6 +189,11 @@
 <dialog id="confirm-dialog" class="window small"><form method="dialog"><header class="window-header"><h2 id="confirm-heading">Confirm</h2></header><p id="confirm-text"></p><footer class="row end"><button value="cancel" type="button" id="confirm-cancel">Cancel</button><button value="ok" type="submit" class="primary" id="confirm-ok">OK</button></footer></form></dialog>
 <dialog id="prompt-dialog" class="window small"><form method="dialog" id="prompt-form"><header class="window-header"><h2 id="prompt-heading">Rename</h2></header><label id="prompt-label">Name <input id="prompt-input" maxlength="200"></label><footer class="row end"><button type="button" id="prompt-cancel">Cancel</button><button type="submit" class="primary">OK</button></footer></form></dialog>
 <dialog id="image-dialog" class="window"><header class="window-header"><h2>Image</h2><button type="button" class="icon close" id="image-close" aria-label="Close">×</button></header><img id="image-full" alt=""><p id="image-full-caption" class="muted"></p></dialog>
+<dialog id="settings-dialog" class="window small"><form method="dialog" id="settings-form"><header class="window-header"><h2>Editor settings</h2></header>
+  <label>Font size (px) <span class="settings-row"><button type="button" id="settings-font-smaller" aria-label="Smaller font">−</button><input id="settings-font-size" type="number" min="9" max="28" step="0.5"><button type="button" id="settings-font-larger" aria-label="Larger font">+</button></span></label>
+  <label>Font <select id="settings-font"><option value="mono">Monospace</option><option value="sans">Sans-serif</option><option value="serif">Serif</option></select></label>
+  <p class="muted">Applies to the passage source and macro editors and is remembered in this browser.</p>
+  <footer class="row end"><button type="button" id="settings-reset">Reset</button><button type="button" id="settings-close" class="primary">Done</button></footer></form></dialog>
 <dialog id="help-dialog" class="window wide"><header class="window-header"><h2>Storyline language</h2><button type="button" class="icon close" id="help-close" aria-label="Close">×</button></header><div class="help-body" id="help-body"></div></dialog>
 <script>/* APP_JS */</script>
 </body></html>

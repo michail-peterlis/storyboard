@@ -16,41 +16,71 @@ export function createCodeEditor(parent, { mode = 'story', onChange = () => {}, 
   const popup = doc.createElement('div'); popup.className = 'code-complete'; popup.setAttribute('role', 'listbox'); popup.hidden = true;
   scroll.append(layer, squiggles, input); parent.append(gutter, scroll, popup);
   const highlighter = mode === 'js' ? highlightJsLine : highlightStoryLine;
-  let diagnostics = [], suppress = false, renderQueued = false, lineNodes = [];
+  let diagnostics = [], suppress = false, syncQueued = false, lineNodes = [], shownLines = [], lineStarts = [0], lineHeights = [], expectedLayerHeight = -1;
+  const headerPattern = /^\s*##(?!#)\s*(\S*)/;
   let complete = null; // { items, index, from, to }
   let findBar = null;
 
   function render() {
-    renderQueued = false;
     const lines = input.value.split('\n');
     const safe = line => { try { return highlighter(line, escapeHtml); } catch { return escapeHtml(line); } };
-    // Author notes (## notes … next ##) are dimmed like comments.
+    const headerOf = line => (mode === 'story' ? headerPattern.exec(line) : null);
+    // Only the lines that changed are re-highlighted: the common prefix and suffix of the shown text are kept.
+    let prefix = 0; const shared = Math.min(lines.length, shownLines.length);
+    while (prefix < shared && lines[prefix] === shownLines[prefix]) prefix++;
+    let suffix = 0; const maxSuffix = shared - prefix;
+    while (suffix < maxSuffix && lines[lines.length - 1 - suffix] === shownLines[shownLines.length - 1 - suffix]) suffix++;
+    // Author notes (## notes … next ##) are dimmed like comments, so a changed section header redraws the rest.
+    for (let i = prefix; i < lines.length - suffix && suffix; i++) if (headerOf(lines[i])) suffix = 0;
+    for (let i = prefix; i < shownLines.length - suffix && suffix; i++) if (headerOf(shownLines[i])) suffix = 0;
     let notes = false;
-    const html = lines.map(line => {
-      const header = mode === 'story' && /^\s*##(?!#)\s*(\S*)/.exec(line);
-      if (header) notes = header[1].toLowerCase() === 'notes';
-      const content = safe(line);
-      return `<span class="ln">${notes && !header ? `<span class="tok-comment">${content}</span>` : content}\n</span>`;
-    }).join('');
-    layer.innerHTML = html;
-    lineNodes = [...layer.children];
-    gutter.innerHTML = lines.map((_, i) => `<div>${i + 1}</div>`).join('');
-    syncHeights(); drawSquiggles();
+    for (let i = 0; i < prefix; i++) { const header = headerOf(lines[i]); if (header) notes = header[1].toLowerCase() === 'notes'; }
+    let html = '';
+    for (let i = prefix; i < lines.length - suffix; i++) {
+      const header = headerOf(lines[i]); if (header) notes = header[1].toLowerCase() === 'notes';
+      const content = safe(lines[i]);
+      html += `<span class="ln">${notes && !header ? `<span class="tok-comment">${content}</span>` : content}\n</span>`;
+    }
+    const template = doc.createElement('template'); template.innerHTML = html;
+    const fresh = [...template.content.children], anchor = lineNodes[lineNodes.length - suffix] ?? null, removed = lineNodes.length - suffix - prefix;
+    for (const node of lineNodes.slice(prefix, lineNodes.length - suffix)) node.remove();
+    if (fresh.length) { if (anchor) anchor.before(...fresh); else layer.append(...fresh); }
+    lineNodes.splice(prefix, removed, ...fresh);
+    shownLines = lines;
+    lineStarts = new Array(lines.length);
+    for (let i = 0, position = 0; i < lines.length; i++) { lineStarts[i] = position; position += lines[i].length + 1; }
+    // Only the fresh lines are measured (the one forced layout per edit); the others keep their known heights.
+    lineHeights.splice(prefix, removed, ...fresh.map(measure));
+    expectedLayerHeight = layer.offsetHeight;
+    drawSquiggles();
+    while (gutter.children.length > lines.length) gutter.lastChild.remove();
+    if (gutter.children.length < lines.length) {
+      let numbers = ''; for (let i = gutter.children.length; i < lines.length; i++) numbers += `<div>${i + 1}</div>`;
+      const more = doc.createElement('template'); more.innerHTML = numbers; gutter.append(more.content);
+    }
+    applyHeights(prefix);
+  }
+  const measure = node => node.getBoundingClientRect().height;
+  function applyHeights(from) {
+    // Wrapped lines: give each gutter number the height of its rendered line. Reads come before writes.
+    const numbers = gutter.children, height = `${layer.scrollHeight}px`;
+    for (let i = from; i < lineHeights.length; i++) { const value = `${lineHeights[i]}px`; if (numbers[i] && numbers[i].style.height !== value) numbers[i].style.height = value; }
+    if (input.style.height !== height) input.style.height = height;
+    if (gutter.scrollTop !== scroll.scrollTop) gutter.scrollTop = scroll.scrollTop;
   }
   function syncHeights() {
-    // Wrapped lines: give each gutter number the height of its rendered line.
-    const numbers = gutter.children;
-    for (let i = 0; i < lineNodes.length; i++) {
-      const height = lineNodes[i].getBoundingClientRect().height;
-      if (numbers[i]) numbers[i].style.height = `${height}px`;
-    }
-    input.style.height = `${layer.scrollHeight}px`;
-    gutter.scrollTop = scroll.scrollTop;
+    // Full re-measure after anything that reflows the layer without editing it: width, font, or a dialog opening.
+    lineHeights = lineNodes.map(measure); expectedLayerHeight = layer.offsetHeight;
+    drawSquiggles(); applyHeights(0);
   }
   function offsetToNode(offset) {
-    // Returns [textNode, offsetInNode] for a document offset inside the layer.
-    const walker = doc.createTreeWalker(layer, 4);
-    let node, position = 0;
+    // Returns [textNode, offsetInNode] for a document offset inside the layer: binary search for the line, then walk it.
+    let low = 0, high = lineStarts.length - 1;
+    while (low < high) { const middle = (low + high + 1) >> 1; if (lineStarts[middle] <= offset) low = middle; else high = middle - 1; }
+    const line = lineNodes[low];
+    if (!line) return null;
+    const walker = doc.createTreeWalker(line, 4);
+    let node, position = lineStarts[low];
     while ((node = walker.nextNode())) {
       const length = node.nodeValue.length;
       if (offset <= position + length) return [node, offset - position];
@@ -66,24 +96,28 @@ export function createCodeEditor(parent, { mode = 'story', onChange = () => {}, 
     return [...range.getClientRects()].map(rect => ({ left: rect.left - base.left, top: rect.top - base.top, width: rect.width, height: rect.height }));
   }
   function drawSquiggles() {
-    squiggles.replaceChildren();
+    // Measure every range first, then build the marks: appending between measurements would force a layout each.
+    const marks = [];
     for (const diagnostic of diagnostics) {
       const [from, to] = diagnostic.range;
       for (const rect of rectsFor(from, Math.max(to, from + 1))) {
         const mark = doc.createElement('div'); mark.className = `squiggle ${diagnostic.severity}`;
         mark.style.left = `${rect.left}px`; mark.style.top = `${rect.top + rect.height - 3}px`; mark.style.width = `${Math.max(6, rect.width)}px`;
-        mark.title = diagnostic.message; squiggles.append(mark);
+        mark.title = diagnostic.message; marks.push(mark);
       }
     }
+    squiggles.replaceChildren(...marks);
   }
-  const queueRender = () => { if (!renderQueued) { renderQueued = true; requestAnimationFrame(render); } };
+  const queueSync = () => { if (!syncQueued) { syncQueued = true; requestAnimationFrame(() => { syncQueued = false; syncHeights(); }); } };
   input.addEventListener('input', () => {
     if (!suppress) onChange(input.value);
     render();
     updateCompletion();
   });
   scroll.addEventListener('scroll', () => { gutter.scrollTop = scroll.scrollTop; });
-  new ResizeObserver(() => queueRender()).observe(scroll);
+  new ResizeObserver(() => queueSync()).observe(scroll);
+  // Font changes (editor settings) reflow the layer without changing the scroll box; our own renders are skipped.
+  new ResizeObserver(() => { if (Math.abs(layer.offsetHeight - expectedLayerHeight) > 0.5) queueSync(); }).observe(layer);
 
   // ---- Autocomplete ---------------------------------------------------------------
   function updateCompletion() {
@@ -232,7 +266,7 @@ export function createCodeEditor(parent, { mode = 'story', onChange = () => {}, 
       setValue(input.value.slice(0, start) + text + input.value.slice(end), cursor, cursor, true); input.focus();
     },
     setDiagnostics(list) { diagnostics = list; drawSquiggles(); },
-    refresh() { render(); },
+    refresh() { syncHeights(); },
     get element() { return input; }
   };
   parent.editor = control;

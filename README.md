@@ -66,7 +66,8 @@ Full reference: [docs/language.md](docs/language.md).
 - **Variables** window: global state, trait defaults and passage locals as rows or
   raw JSON. **Macros** window: custom JavaScript with a code editor.
 - File menu: new, open (JSON / ZIP / folder), save (folder or ZIP), download ZIP,
-  language reference, light/dark theme. Ctrl+S saves, Ctrl+Z/Y undo/redo.
+  language reference, editor settings (font size and family for the source and macro
+  editors), light/dark theme. Ctrl+S saves, Ctrl+Z/Y undo/redo.
 
 ## Project files
 
@@ -79,7 +80,7 @@ Projects are folders: `story.json` + `acts/` + `images/`; Download ZIP packages 
 same layout. Saved games are bound to the story revision. See
 [docs/project-format.md](docs/project-format.md).
 
-No story text is stored in the browser; only workspace sizes and the theme are
+No story text is stored in the browser; only workspace sizes, editor font and the theme are
 remembered locally.
 
 **Custom JavaScript is for trusted authors only.** It runs only after explicit

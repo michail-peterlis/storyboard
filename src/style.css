@@ -141,7 +141,7 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe { 
 .image-fields { flex: 1; display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
 .image-fields input { width: 100%; font-size: 12.5px; }
 .editor-toolbar { border-top: 1px solid var(--line); }
-.source-editor { flex: 1; min-height: 160px; position: relative; display: flex; background: var(--bg); font: 13.5px/1.6 var(--mono); }
+.source-editor { flex: 1; min-height: 160px; position: relative; display: flex; background: var(--bg); font: var(--editor-font-size, 13.5px)/1.6 var(--editor-font-family, var(--mono)); }
 #macro-code.source-editor { flex: none; height: 260px; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
 .panel-details { border-top: 1px solid var(--line); flex: none; max-height: 30%; display: flex; flex-direction: column; }
 .panel-details summary { padding: .4rem .8rem; cursor: pointer; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; list-style: none; display: flex; align-items: center; gap: .4rem; }
@@ -156,7 +156,8 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe { 
 
 /* Code editor component */
 .code-editor { position: relative; flex: 1; display: grid; grid-template-columns: auto 1fr; min-height: 0; width: 100%; }
-.code-gutter { background: var(--bg-2); color: var(--muted); text-align: right; padding: .6rem .6rem .6rem .8rem; user-select: none; overflow: hidden; border-right: 1px solid var(--line); font-size: 11.5px; }
+.code-gutter { background: var(--bg-2); color: var(--muted); text-align: right; padding: .6rem .6rem .6rem .8rem; user-select: none; overflow: hidden; border-right: 1px solid var(--line); font-size: calc(var(--editor-font-size, 13.5px) * .85); font-family: var(--mono); }
+.settings-row { display: flex; align-items: center; gap: .4rem; } .settings-row input[type=number] { width: 5.5em; }
 .code-gutter div { white-space: pre; }
 .code-scroll { position: relative; overflow: auto; min-width: 0; }
 .code-layer, .code-input { margin: 0; padding: .6rem .9rem 4rem .9rem; font: inherit; line-height: inherit; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; tab-size: 2; }
