@@ -49,8 +49,8 @@ Full reference: [docs/language.md](docs/language.md).
 
 ## Workspace
 
-- **Map** (left): each card shows the passage title, its image and the first line written
-  after the `# Title` heading. Drag blank space to pan, wheel to zoom, drag cards to move. Cards
+- **Map** (left): each card shows the passage title, its image and, as a caption, the line
+  written directly under the `# Title` heading (leave it blank for no caption). Drag blank space to pan, wheel to zoom, drag cards to move. Cards
   sit on the dot grid, 24 px apart at 100% and coarser when zoomed out; dragging snaps to
   the visible dots, and stories with off-grid positions are shown snapped. Drag
   the port on a card's right edge onto another card to insert a link. **Arrange**

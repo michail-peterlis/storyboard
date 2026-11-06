@@ -64,11 +64,10 @@ export function createMap(root, hooks) {
       if (cardsRoot.children[index] !== card.node) cardsRoot.insertBefore(card.node, cardsRoot.children[index] ?? null);
     });
   }
-  // The card shows one line of source: the first non-blank line after the `# Title` heading (or the first line at all).
+  // The card caption is the line directly under the `# Title` heading; a blank line (or no heading) means no caption.
   function excerptOf(source) {
     const lines = source.split('\n'), title = lines.findIndex(line => /^#(?!#)/.test(line.trimStart()));
-    for (let i = title + 1; i < lines.length; i++) { const text = lines[i].trim(); if (text) return text.slice(0, 160); }
-    return '';
+    return title < 0 ? '' : (lines[title + 1] ?? '').trim().slice(0, 160);
   }
   function cardHeight(id) { return cards.get(id)?.node.offsetHeight || 120; }
   function anchor(passage, position, side) {
